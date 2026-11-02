@@ -1,0 +1,12 @@
+overlay:
+  # Login-time promo popup (paid pack) — close it with its X. Same gating as the
+  # base ads module: device-level, only while identity is still unknown.
+  - name: ads_ru.promo_close.visible
+    region: ads_ru.promo_close
+    device_level: true
+    action: findIcon
+    cond: active_player == ""
+    threshold: 0.85
+    ttl: 3
+    steps:
+      - push_scenario: ads_ru_close_promo

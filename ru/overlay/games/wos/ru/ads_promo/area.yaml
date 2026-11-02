@@ -1,0 +1,27 @@
+{
+  "version": 2,
+  "_comment": "RU «Белая мгла»: login promo popups (e.g. «Набор «Ночь…»» Halloween pack) are not recognised by the EN ads module and block the bot on every game start. Close them with their white X (top-right, purple outline). Search window covers the X position across popup layouts.",
+  "screens": [
+    {
+      "screen_id": "",
+      "ocr": "references/promo_popup.png",
+      "regions": [
+        {
+          "name": "ads_ru.promo_close",
+          "action": "exist",
+          "isSearch": true,
+          "threshold": 0.85,
+          "bbox": {
+            "x": 72.0,
+            "y": 4.0,
+            "width": 26.0,
+            "height": 18.0,
+            "rotation": 0,
+            "original_width": 720,
+            "original_height": 1280
+          }
+        }
+      ]
+    }
+  ]
+}

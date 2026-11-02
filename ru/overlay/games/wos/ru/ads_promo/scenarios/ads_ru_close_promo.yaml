@@ -1,0 +1,7 @@
+enabled: true
+name: Close RU promo popup (X)
+priority: 120_000
+device_level: true
+steps:
+  - click: ads_ru.promo_close
+  - wait: 800ms

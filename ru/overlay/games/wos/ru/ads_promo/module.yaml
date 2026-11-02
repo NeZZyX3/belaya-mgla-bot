@@ -1,0 +1,11 @@
+id: ads-promo-ru
+title: Promo popups (RU)
+description: >-
+  RU «Белая мгла» login promo popups (paid packs) that the EN ads module does
+  not recognise. Detects the white X close button and taps it — never the
+  price button. Device-level, only before identity is resolved (login phase).
+scenarios: scenarios
+analyze: analyze/analyze.yaml
+area: area.yaml
+references: references
+wiki: false
