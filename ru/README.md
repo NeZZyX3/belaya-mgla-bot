@@ -30,6 +30,7 @@
 | Ошибки Redis `Cannot enable maintenance notifications…` ломали планировщик | `ru/runtime/belaya_redis_compat.py` |
 | Бот не узнавал аккаунт: в русском профиле блок с ID выше на 45 px | `ru/overlay/games/wos/ru/core/chief_profile` |
 | Подсказки обучения ложно срабатывали на русских экранах | модуль onboarding отключён для RU (`ru/overlay/.../onboarding`) |
+| Бот иногда читал русский текст английской моделью OCR и не узнавал экраны | `ru/runtime/belaya_force_catalog.py` — всегда режим `wos_ru` |
 
 ## Как помочь
 
