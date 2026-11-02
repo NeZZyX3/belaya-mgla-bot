@@ -1,0 +1,10 @@
+# belaya-mgla-bot: RU «С возвращением!» — live tesseract:rus reads the title as
+# «возвращение!» (drops the trailing «м»), so the full word never matched and
+# the screen stayed unknown. Match the stem instead.
+screens:
+  welcome_back:
+    priority: 3
+    rules:
+    - ocr: text.welcome_back
+      contains: [возвращени, Welcome]
+      threshold: 0.4

@@ -8,4 +8,6 @@ description: >-
   detection nor OCR: RU title visible → tap the green confirm button.
 scenarios: scenarios
 analyze: analyze/analyze.yaml
+area: area.yaml
+references: references
 wiki: false

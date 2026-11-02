@@ -1,0 +1,26 @@
+{
+  "version": 2,
+  "_comment": "RU «С возвращением!» title template (cut from the live frame) + the base green confirm button; used by a screen-independent confirm rule.",
+  "screens": [
+    {
+      "screen_id": "",
+      "ocr": "references/welcome_back_ru.png",
+      "regions": [
+        {
+          "name": "ru_wb.title",
+          "action": "exist",
+          "threshold": 0.85,
+          "bbox": {
+            "x": 35.138888888888886,
+            "y": 18.515625,
+            "width": 29.444444444444443,
+            "height": 2.1875,
+            "rotation": 0,
+            "original_width": 720,
+            "original_height": 1280
+          }
+        }
+      ]
+    }
+  ]
+}

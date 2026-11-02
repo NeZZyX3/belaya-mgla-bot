@@ -1,7 +1,7 @@
 overlay:
   # «С возвращением!» title (RU template from base core/welcome_back) → confirm.
   - name: welcome_back.ru_title.confirm
-    region: text.welcome_back_ru
+    region: ru_wb.title
     device_level: true
     action: findIcon
     threshold: 0.85
