@@ -1,0 +1,9 @@
+id: onboarding-ru-overlay
+title: Onboarding (disabled for RU)
+description: >
+  «Белая мгла» players run established accounts. The base onboarding tutorial
+  rules are gated only on "identity unknown" and false-fire on RU screens
+  (Chapter Claim / chapter entry at ~0.5 template score) while the identity probe
+  is still resolving, tapping random spots and starving who_i_am. Disabled for
+  the wos_ru catalog only; the EN build keeps base games/wos/core/onboarding.
+enabled: false

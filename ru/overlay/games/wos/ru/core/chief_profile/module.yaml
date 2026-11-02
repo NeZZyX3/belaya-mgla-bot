@@ -1,0 +1,6 @@
+id: chief-profile-ru-overlay
+title: Chief Profile (RU overlay)
+description: RU chief_profile info panel is shifted up vs EN.
+enabled: true
+area: area.yaml
+wiki: false

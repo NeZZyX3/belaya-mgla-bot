@@ -1,0 +1,187 @@
+# belaya-mgla-bot (Белая мгла) — production compose for Windows/macOS/Linux.
+#
+# bot + api run the RU-layer image (official Autopilot image + RU fixes),
+# web is the official dashboard image. Installed and updated by install.bat:
+#     %USERPROFILE%\autopilot\docker-compose.prod.yml
+#
+# Live screenshots (rolling preview) are written to ./captures next to this
+# file, so they can be inspected without opening the dashboard.
+#
+# Upstream project and docs: https://github.com/batazor/autopilot
+# (network/ADB model is identical; see comments in the upstream compose file).
+
+services:
+  redis:
+    image: redis:alpine
+    container_name: autopilot-redis
+    # ``redis:alpine`` runs as the ``redis`` user, but a fresh named volume
+    # is mounted root-owned — so bind() on the socket fails with EACCES on
+    # first boot. ``chown`` the socket dir in a thin entrypoint wrapper,
+    # then ``exec docker-entrypoint.sh`` keeps the upstream UID drop. The
+    # ``--unixsocketperm 777`` line lets bot/api containers (different UIDs
+    # from ``redis``) connect without us aligning UIDs across images.
+    entrypoint:
+      - sh
+      - -c
+      - >
+        chown redis:redis /var/run/redis &&
+        exec docker-entrypoint.sh
+        redis-server
+        --appendonly yes
+        --unixsocket /var/run/redis/redis.sock
+        --unixsocketperm 777
+    # No ``ports:`` — every service talks to Redis over the ``redis_socket``
+    # unix socket, so there is nothing to publish. Exposing 6379 (even on
+    # loopback) would needlessly hand any local process anonymous read/write
+    # to the queue and state.
+    volumes:
+      - redis_data:/data
+      - redis_socket:/var/run/redis
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "-s", "/var/run/redis/redis.sock", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  bot:
+    image: ${WOS_RU_REGISTRY:-ghcr.io/nezzyx3/belaya-mgla-bot}/bot:${WOS_IMAGE_TAG:-latest}
+    # Stable name so you can shell in directly, e.g.
+    #     docker exec autopilot-bot adb devices
+    container_name: autopilot-bot
+    # host-mode: shared loopback with the host so ``adb`` and the
+    # ``127.0.0.1:5037`` server are reachable without ``adb -a`` (which would
+    # expose ADB on every interface, including LAN).
+    network_mode: host
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      # ``redis-py`` accepts ``unix:///path?db=N`` directly. Volume-mounted
+      # at the same path in this container; host-mode networking doesn't
+      # affect bind mounts.
+      WOS_REDIS_URL: unix:///var/run/redis/redis.sock?db=0
+      # ADB: no ADB_SERVER_SOCKET on purpose. The bot starts its own adb server
+      # on boot (worker.supervisor → adb.ensure_adb_server); host networking
+      # means that server listens on 127.0.0.1:5037 for the whole host, so the
+      # user never installs adb or runs ``adb start-server`` themselves.
+    volumes:
+      - wos_state:/app/db/state
+      - ./captures:/app/temporal
+      - redis_socket:/var/run/redis
+    restart: unless-stopped
+    healthcheck:
+      # The supervisor serves a loopback /health endpoint (worker.health_server)
+      # reporting reconcile-loop liveness — catches a hung-but-alive supervisor,
+      # not just process existence. Port via WOS_BOT_HEALTH_PORT (default 8770);
+      # keep this curl in sync. ``bot`` uses host networking, so 127.0.0.1 hits it.
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8770/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+      start_interval: 3s
+      retries: 3
+
+  # Roboflow object-detection inference server (Fishing Tournament fish
+  # detector → model find-fish-ssnpa/6). It publishes only host loopback, and
+  # host-networked ``api`` reaches it on ``127.0.0.1:9001``. Set ROBOFLOW_API_KEY
+  # in the environment so the server can pull weights on first request (cached
+  # in ``inference_cache``).
+  #
+  # OPTIONAL — gated behind the ``full`` / ``inference`` profile so the default
+  # stack does not pull this image. Enable it with:
+  #     ROBOFLOW_API_KEY=rf_... docker compose -f docker-compose.prod.yml --profile full up -d
+  inference:
+    image: roboflow/roboflow-inference-server-cpu:latest
+    container_name: autopilot-inference
+    profiles: ["full", "inference"]
+    environment:
+      ROBOFLOW_API_KEY: ${ROBOFLOW_API_KEY:-}
+    volumes:
+      - inference_cache:/tmp/cache
+    ports:
+      - "127.0.0.1:9001:9001"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9001/info')"]
+      interval: 30s
+      timeout: 10s
+      start_period: 40s
+      retries: 3
+
+  api:
+    image: ${WOS_RU_REGISTRY:-ghcr.io/nezzyx3/belaya-mgla-bot}/bot:${WOS_IMAGE_TAG:-latest}
+    container_name: autopilot-api
+    command: ["api"]
+    network_mode: host
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      WOS_REDIS_URL: unix:///var/run/redis/redis.sock?db=0
+      WOS_API_HOST: 127.0.0.1
+      WOS_API_PORT: "8765"
+      # No ADB_SERVER_SOCKET — the API also ensures the adb server on startup and
+      # the bot owns it; on the shared host loopback both reach 127.0.0.1:5037.
+      # Fish-detect debug page runs inference inside the API process; reach the
+      # optional sidecar over the shared host loopback.
+      WOS_INFERENCE_URL: http://127.0.0.1:9001
+      ROBOFLOW_API_KEY: ${ROBOFLOW_API_KEY:-}
+    volumes:
+      - wos_state:/app/db/state
+      - ./captures:/app/temporal
+      - redis_socket:/var/run/redis
+      # OPTIONAL — lets the dashboard's "Сервис распознавания" widget (Fish-detect
+      # page) pull/start/stop the inference container straight from the UI. The
+      # API shells out to ``docker`` against the host daemon over this socket.
+      #
+      # SECURITY: mounting docker.sock grants the API container root-equivalent
+      # control of the host. The dashboard binds host loopback only — keep it off
+      # any public interface before enabling this. Also note the published ``bot``
+      # image does not ship the ``docker`` CLI, so the widget reports "Docker
+      # недоступен" until you base the image on one that includes ``docker-ce-cli``
+      # (or bind-mount a static ``docker`` binary). Left commented by default.
+      # - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8765/health"]
+      interval: 30s
+      timeout: 5s
+      # First boot loads the compiled extension tree (cv2, onnxruntime, tesseract)
+      # before uvicorn binds 8765; on a slow host that can exceed one interval.
+      # ``start_interval`` re-probes every few seconds during the grace window
+      # (Compose/Engine 25+), so a ready API flips to healthy within seconds
+      # instead of waiting a full 30s — while a genuinely slow boot still gets the
+      # whole ``start_period`` before any failure counts. Avoids the false
+      # "api is unhealthy" that blocks ``web`` (which depends on api: healthy).
+      start_period: 60s
+      start_interval: 3s
+      retries: 3
+
+  web:
+    image: ${WOS_REGISTRY:-registry.gitlab.com/batazor/autopilot}/web:${WOS_IMAGE_TAG:-latest}
+    container_name: autopilot-web
+    network_mode: host
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      # Next bakes the /api proxy target into the image at build time
+      # (Dockerfile.web ARG WOS_API_URL → 127.0.0.1:8765 for host networking);
+      # the runtime env is never re-read, so there's no WOS_API_URL here.
+      HOSTNAME: 127.0.0.1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/overview').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+      start_interval: 3s
+      retries: 3
+
+volumes:
+  redis_data:
+  redis_socket:
+  wos_state:
+  wos_temporal:
+  inference_cache:

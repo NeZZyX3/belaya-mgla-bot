@@ -1,0 +1,12 @@
+#!/bin/sh
+# belaya-mgla-bot: adb shim placed first on PATH (/app/.venv/bin/adb).
+# Under Docker Desktop host networking (Windows/macOS) a connect to an UNBOUND
+# loopback port is accepted by the host-port proxy and then hangs, so a plain
+# "adb start-server" never notices that no server runs and times out. Start the
+# server in foreground mode, detached from the caller — that path never probes.
+if [ "$1" = "start-server" ]; then
+  setsid /usr/bin/adb nodaemon server >/tmp/adb.log 2>&1 </dev/null &
+  sleep 2
+  exit 0
+fi
+exec /usr/bin/adb "$@"
