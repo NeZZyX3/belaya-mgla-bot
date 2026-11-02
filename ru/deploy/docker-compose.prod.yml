@@ -49,6 +49,11 @@ services:
     # Stable name so you can shell in directly, e.g.
     #     docker exec autopilot-bot adb devices
     container_name: autopilot-bot
+    # belaya-mgla-bot: also write the bot log next to the screenshots
+    # (%USERPROFILE%\autopilot\captures\bot.log, truncated on every start) so it
+    # can be read without Docker Desktop. ``bin/bot`` stays in PID 1's cmdline
+    # for the image healthcheck.
+    command: ["sh", "-c", "/app/.venv/bin/bot 2>&1 | tee /app/temporal/bot.log"]
     # host-mode: shared loopback with the host so ``adb`` and the
     # ``127.0.0.1:5037`` server are reachable without ``adb -a`` (which would
     # expose ADB on every interface, including LAN).
