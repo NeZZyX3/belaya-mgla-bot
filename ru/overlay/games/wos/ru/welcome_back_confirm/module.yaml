@@ -1,0 +1,11 @@
+id: welcome-back-confirm-ru
+title: Welcome back confirm (RU)
+description: >-
+  RU «Белая мгла»: the offline-income dialog «С возвращением!» blocked the bot on
+  every start. Its title template (text.welcome_back_ru) matches 1.0 on the live
+  frame, yet the screen stayed unrecognised and the base OCR rule reads the
+  «Подтвердить» button as empty (block-mode OCR). This rule needs neither screen
+  detection nor OCR: RU title visible → tap the green confirm button.
+scenarios: scenarios
+analyze: analyze/analyze.yaml
+wiki: false

@@ -1,0 +1,11 @@
+overlay:
+  # «С возвращением!» title (RU template from base core/welcome_back) → confirm.
+  - name: welcome_back.ru_title.confirm
+    region: text.welcome_back_ru
+    device_level: true
+    action: findIcon
+    threshold: 0.85
+    priority: 120_000
+    ttl: 5s
+    steps:
+      - push_scenario: welcome_back_ru_confirm

@@ -1,0 +1,7 @@
+enabled: true
+name: Confirm RU welcome-back (offline income)
+priority: 120_000
+device_level: true
+steps:
+  - click: button.confirm.green
+  - wait: 1s
