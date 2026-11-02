@@ -15,6 +15,10 @@ COPY ru/runtime/belaya_redis_compat.py ru/runtime/belaya_redis_compat.pth /app/.
 # Always use the RU module catalog (Russian OCR + RU overlays) for game "wos".
 COPY ru/runtime/belaya_force_catalog.py ru/runtime/belaya_force_catalog.pth /app/.venv/lib/python3.13/site-packages/
 
+# Established RU accounts: never gate popup dismissers / identity probe on the
+# first-run tutorial phase (upstream bootstrap deadlock with login modals).
+COPY ru/runtime/belaya_no_onboarding.py ru/runtime/belaya_no_onboarding.pth /app/.venv/lib/python3.13/site-packages/
+
 # Fail the build if the fixes do not load in this upstream version.
 RUN /app/.venv/bin/python -c "import redis.connection as c, belaya_redis_compat; \
 cls = getattr(c, 'AbstractConnection', None) or c.Connection; \
