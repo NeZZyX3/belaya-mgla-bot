@@ -5,7 +5,7 @@ the controller notices the running package is ``com.gof.globalru``. When that
 detection is missed (game already open, emulator restarted) the worker stays on
 the global ``wos`` catalog: Tesseract reads Russian screens with the English
 model and no RU screen is recognised. This fork serves only the RU build, so the
-catalog for game ``wos`` is pinned to ``BELAYA_FORCE_CATALOG`` (default
+catalog bound for game ``wos`` (worker processes) is pinned to ``BELAYA_FORCE_CATALOG`` (default
 ``wos_ru``; set it to an empty string to restore upstream behaviour).
 
 Applied lazily right after the ``services`` module is imported (meta-path hook
@@ -43,11 +43,10 @@ def _patch(mod) -> None:
                 orig_bind_catalog(_FORCED)
 
         mod.bind_active_game = bind_active_game
-    # Unbound processes (API, scheduler) fall back to the forced catalog too.
-    try:
-        orig_bind_catalog(_FORCED)
-    except Exception:
-        pass
+    # NOTE: the unbound fallback is left alone on purpose. Startup validation
+    # (supervisor main, watchdog) checks every catalog separately and relies
+    # on the default "wos" being the unbound catalog; only explicit binds —
+    # i.e. the per-device worker process — are pinned to the RU catalog.
     mod._belaya_catalog_patch = True
 
 
